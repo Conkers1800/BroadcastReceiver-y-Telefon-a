@@ -1,44 +1,37 @@
-package com.conkers.broadcastreciverytelefonia.componentes
-
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.provider.Telephony
 import android.telephony.SmsManager
 import android.telephony.TelephonyManager
 import android.util.Log
-import android.widget.Toast
 
-private const val TAG = "MyBroadcastReceiver"
 class MyBroadcastReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED -> {
-                Toast.makeText(context, "El sistema se inició correctamente", Toast.LENGTH_LONG).show()
-                Log.d("MyBroadcastReceiver", "Sistema iniciado")
-            }
-            TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
-                val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-                val incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
 
-                // Recuperar datos guardados
+    private var lastIncomingNumber: String? = null // Guarda el número de la llamada entrante
+
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
+            val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+            val incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+
+            // Guardar el número entrante si está sonando
+            if (state == TelephonyManager.EXTRA_STATE_RINGING) {
+                lastIncomingNumber = incomingNumber
+            }
+
+            // Detectar si la llamada se colgó
+            if (state == TelephonyManager.EXTRA_STATE_IDLE) {
+                // Verificar si el número coincide con el configurado
                 val sharedPreferences = context.getSharedPreferences("AutoReplyPrefs", Context.MODE_PRIVATE)
                 val savedNumber = sharedPreferences.getString("savedNumber", null)
                 val savedMessage = sharedPreferences.getString("savedMessage", null)
 
-                if (state == TelephonyManager.EXTRA_STATE_RINGING && incomingNumber == savedNumber) {
-                    sendAutoReply(incomingNumber, savedMessage)
+                if (lastIncomingNumber == savedNumber) {
+                    sendAutoReply(savedNumber, savedMessage)
                 }
-            }
-            Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
-                val bundle = intent.extras
-                val pdus = bundle?.get("pdus") as? Array<*>
-                pdus?.forEach { pdu ->
-                    val sms = Telephony.SmsMessage.createFromPdu(pdu as ByteArray)
-                    val message = "Mensaje de: ${sms.originatingAddress}\nContenido: ${sms.messageBody}"
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                    Log.d("MyBroadcastReceiver", message)
-                }
+
+                // Limpiar el estado del último número
+                lastIncomingNumber = null
             }
         }
     }
@@ -48,6 +41,8 @@ class MyBroadcastReceiver : BroadcastReceiver() {
             val smsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(number, null, message, null, null)
             Log.d("MyBroadcastReceiver", "Mensaje enviado a $number: $message")
+        } else {
+            Log.e("MyBroadcastReceiver", "Número o mensaje no configurado correctamente.")
         }
     }
 }
