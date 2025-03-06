@@ -18,13 +18,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             AutoReplyApp { phoneNumber, message ->
                 // Guardar número y mensaje en SharedPreferences
-                val sharedPref = getSharedPreferences("AutoReplySettings", MODE_PRIVATE)
+                val sharedPref = getSharedPreferences("AutoRespuesta", MODE_PRIVATE)
                 sharedPref.edit {
                     putString("phoneNumber", phoneNumber)
                     putString("message", message)
                 }
                 // Notificar al usuario que se ha guardado la configuración
-                Toast.makeText(this, "Configuración guardada correctamente", Toast.LENGTH_SHORT)
+                Toast.makeText(this, "Listo para enviar", Toast.LENGTH_SHORT)
                     .show()
 
                 // Iniciar el servicio
